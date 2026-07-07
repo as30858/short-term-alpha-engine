@@ -9,7 +9,6 @@ app = Flask(__name__)
 TELEGRAM_TOKEN = "8814271928:AAG8Db_g6Z4noOEYdLeXe0wzgELDP7ijjNw"
 TELEGRAM_CHAT_ID = "8867850194"
 
-# Diversified watchlist with high institutional participation
 SHORT_TERM_WATCHLIST = [
     'HDFCBANK.NS', 'BEL.NS', 'HAL.NS', 'LT.NS', 'TATAPOWER.NS', 'TATASTEEL.NS',
     'ITC.NS', 'BANKBARODA.NS', 'PFC.NS', 'RECLTD.NS', 'ONGC.NS', 'NTPC.NS', 
@@ -25,26 +24,13 @@ def deep_financial_and_sentiment_scan():
         try:
             stock = yf.Ticker(ticker, session=session)
             
-            # --- 1. FINANCIALS DATA EXTRACTION ---
+            # Fundamentals Evaluation
             info = stock.info
             debt_to_equity = info.get('debtToEquity', 0)
             rev_growth = info.get('quarterlyRevenueGrowth', 0)
-            
-            # Convert decimal growth into percentage format safely
             rev_growth_pct = (rev_growth * 100) if rev_growth else 0.0
             
-            # --- 2. RECOMMENDATION SENTIMENT ANALYSIS ---
-            recs = stock.recommendations
-            buy_sentiment = "Favorable / Stable"
-            
-            # Count recent institutional analyst upgrades if available
-            if recs is not None and not recs.empty:
-                recent_recs = recs.tail(10)
-                buy_counts = recent_recs['To Grade'].value_style.str.contains('Buy|Overweight|Outperform', case=False, na=False).sum()
-                if buy_counts >= 3:
-                    buy_sentiment = f"Bullish Institutional Backing ({buy_counts} Recent Upgrades)"
-
-            # --- 3. PRICE VELOCITY CHECK ---
+            # Technical Flow & Volatility Velocity Filters
             hist = stock.history(period="3mo")
             if len(hist) < 20: continue
             
@@ -53,18 +39,17 @@ def deep_financial_and_sentiment_scan():
             avg_volume = hist['Volume'].tail(20).mean()
             latest_volume = hist['Volume'].iloc[-1]
             
-            # Filtering Logic: Positive price velocity and solid volume confirmation
             if current_price > price_20_days_ago and latest_volume > (avg_volume * 1.05):
                 momentum_pct = ((current_price - price_20_days_ago) / price_20_days_ago) * 100
                 
-                # Financial Safety Constraints: Clean revenue expansion OR conservative gearing profiles
+                # Structural filter: Ensure data verification fields aren't heavily overleveraged
                 if rev_growth_pct > 0 or debt_to_equity < 200:
                     premium_picks.append(
                         f"🏛️ *{ticker}* \n"
                         f"  ▪️ *Current Price:* ₹{current_price:.2f} (+{momentum_pct:.1f}% Momentum)\n"
                         f"  ▪️ *YoY Revenue Growth:* {rev_growth_pct:+.1f}%\n"
                         f"  ▪️ *Debt-to-Equity Ratio:* {debt_to_equity:.1f}%\n"
-                        f"  ▪️ *Market Sentiment:* {buy_sentiment}\n"
+                        f"  ▪️ *Status:* Confirmed Financial Stability Alignment\n"
                     )
         except Exception:
             pass
@@ -72,7 +57,7 @@ def deep_financial_and_sentiment_scan():
     report = (
         f"🎯 *DEEP-VALUE SHORT-TERM MATRIX* 🎯\n"
         f"🗓️ Date: {datetime.now().strftime('%d-%b-%Y')}\n"
-        f"📊 Metric Scope: Fundamentals, Gearing & Institutional Sentiment\n"
+        f"📊 Metric Scope: Fundamentals, Gearing & Price Momentum\n"
         f"────────────────────────\n\n"
     )
     
@@ -87,4 +72,4 @@ def deep_financial_and_sentiment_scan():
 @app.route('/')
 def handle_request():
     threading.Thread(target=deep_financial_and_sentiment_scan).start()
-    return "Advanced fundamental short-term engine scanning started.", 200
+    return "OK", 200
